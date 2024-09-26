@@ -5,6 +5,7 @@ RM := rm -rf
 BUILD_DIR := build
 BUILD_TEST_DIR := build-test
 DHCP6RELAY_TARGET := $(BUILD_DIR)/dhcp6relay
+DHCP4RELAY_TARGET := $(BUILD_DIR)/dhcp4relay
 DHCP6RELAY_TEST_TARGET := $(BUILD_TEST_DIR)/dhcp6relay-test
 CP := cp
 MKDIR := mkdir
@@ -18,20 +19,23 @@ CPPFLAGS_TEST := --coverage -fprofile-arcs -ftest-coverage -fprofile-generate -f
 LDLIBS_TEST := --coverage -lgtest -lgmock -pthread -lstdc++fs -fsanitize=address
 PWD := $(shell pwd)
 
-all: $(DHCP6RELAY_TARGET) $(DHCP6RELAY_TEST_TARGET)
+all: $(DHCP6RELAY_TARGET) $(DHCP4RELAY_TARGET) $(DHCP6RELAY_TEST_TARGET)
 
 -include dhcpv6/src/subdir.mk
 -include dhcpv6/test/subdir.mk
+-include dhcpv4/src/subdir.mk
 
 # Use different build directories based on whether it's a regular build or a
 # test build. This is because in the test build, code coverage is enabled,
 # which means the object files that get built will be different
 OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
 TEST_OBJS = $(TEST_SRCS:%.cpp=$(BUILD_TEST_DIR)/%.o)
+DHCV4_OBJS = $(DHCPV4_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJS:%.o=%.d)
 -include $(TEST_OBJS:%.o=%.d)
+-include $(DHCV4_OBJS:%.o=%.d)
 endif
 
 $(BUILD_DIR)/%.o: %.cpp
@@ -39,6 +43,9 @@ $(BUILD_DIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 $(DHCP6RELAY_TARGET): $(OBJS)
+	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(DHCP4RELAY_TARGET): $(DHCV4_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(BUILD_TEST_DIR)/%.o: %.cpp
@@ -53,11 +60,13 @@ test: $(DHCP6RELAY_TEST_TARGET)
 	$(GCOVR) -r ./ --html --html-details -o $(DHCP6RELAY_TEST_TARGET)-code-coverage.html
 	$(GCOVR) -r ./ --xml-pretty -o $(DHCP6RELAY_TEST_TARGET)-code-coverage.xml
 
-install: $(DHCP6RELAY_TARGET)
+install: $(DHCP6RELAY_TARGET) $(DHCP4RELAY_TARGET)
 	install -D $(DHCP6RELAY_TARGET) $(DESTDIR)/usr/sbin/$(notdir $(DHCP6RELAY_TARGET))
+	install -D $(DHCP4RELAY_TARGET) $(DESTDIR)/usr/sbin/$(notdir $(DHCP4RELAY_TARGET))
 
 uninstall:
 	$(RM) $(DESTDIR)/usr/sbin/$(notdir $(DHCP6RELAY_TARGET))
+	$(RM) $(DESTDIR)/usr/sbin/$(notdir $(DHCP4RELAY_TARGET))
 
 clean:
 	-$(RM) $(BUILD_DIR) $(BUILD_TEST_DIR) *.html *.xml
