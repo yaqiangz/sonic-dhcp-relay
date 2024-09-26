@@ -20,8 +20,8 @@ PWD := $(shell pwd)
 
 all: $(DHCP6RELAY_TARGET) $(DHCP6RELAY_TEST_TARGET)
 
--include src/subdir.mk
--include test/subdir.mk
+-include dhcpv6/src/subdir.mk
+-include dhcpv6/test/subdir.mk
 
 # Use different build directories based on whether it's a regular build or a
 # test build. This is because in the test build, code coverage is enabled,
